@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Satellite Image Segmentation</title>
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --primary-dark: #0d47a1;
+            --accent-color: #ff8f00;
+            --light-bg: #f5f7fa;
+            --white: #ffffff;
+            --gray-light: #e0e0e0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --spacing: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background-color: var(--light-bg);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--white);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        header img {
+            max-height: 100px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.2rem;
+            font-weight: 600;
+            margin: 30px auto;
+            text-align: center;
+            max-width: 1200px;
+        }
+
+        .upload-container {
+            max-width: 700px;
+            margin: 30px auto;
+            padding: var(--spacing);
+        }
+
+        form {
+            background: var(--white);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .file-input-container {
+            position: relative;
+            margin-bottom: 25px;
+            border: 2px dashed var(--gray-light);
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-container:hover {
+            border-color: var(--primary-color);
+        }
+
+        .file-input-label {
+            display: block;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        #loading {
+            text-align: center;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--primary-color);
+            display: none;
+        }
+
+        .results-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 1400px;
+            margin: 20px auto 40px;
+            padding: 0 var(--spacing);
+        }
+
+        .image-box, .legend-box {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            flex: 1;
+            min-width: 300px;
+            max-width: 450px;
+            transition: transform 0.3s ease;
+        }
+
+        .image-box:hover, .legend-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .image-box h2, .legend-box h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-bottom: 2px solid var(--gray-light);
+            padding-bottom: 10px;
+        }
+
+        .image-container {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--gray-light);
+        }
+
+        .image-box img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .image-box img:hover {
+            transform: scale(1.02);
+        }
+
+        .legend-box {
+            flex: 0 1 350px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+        }
+
+        .color-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 15px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        #status-message {
+            text-align: center;
+            margin: 20px 0;
+            font-weight: 500;
+            color: #555;
+            padding: 10px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .upload-container {
+                padding: 15px;
+            }
+
+            form {
+                padding: 20px;
+            }
+
+            .results-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+
+            .image-box, .legend-box {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/static/image.png" alt="NRSC ISRO Logo">
+    </header>
+
+    <h1>Satellite Image Segmentation Tool</h1>
+
+    <div class="upload-container">
+        <form id="upload-form" method="POST" enctype="multipart/form-data">
+            <div class="file-input-container">
+                <span class="file-input-label">Select a GeoTIFF file (.tif, .tiff)</span>
+                <input type="file" id="file-input" name="file" accept=".tif, .tiff" required>
+            </div>
+            <button type="submit">Upload & Generate Segmentation</button>
+        </form>
+    </div>
+
+    <p id="loading">Processing your satellite image... Please wait.</p>
+
+    <div class="results-container">
+        <div class="image-box">
+            <h2>Original Satellite Image</h2>
+            <div class="image-container">
+                <img id="uploaded-image" src="" style="display: none;" alt="Uploaded Satellite Image">
+            </div>
+        </div>
+
+        <div class="image-box">
+            <h2>Segmented Classification</h2>
+            <div class="image-container">
+                <img id="segmented-image" src="" style="display: none;" alt="Segmented Image Classification">
+            </div>
+        </div>
+
+        <div class="legend-box">
+            <h2>Classification Legend</h2>
+            <div class="legend-item"><div class="color-box" style="background: rgb(0, 100, 0);"></div> Tree Cover</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(255, 187, 34);"></div> Shrubland</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(255, 255, 76);"></div> Grassland</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(144, 238, 144);"></div> Cropland</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(250, 0, 0);"></div> Built-up</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(180, 180, 180);"></div> Bare/Sparse Vegetation</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(0, 100, 200);"></div> Permanent Water Bodies</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(139, 69, 19);"></div> Bare Land</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(0, 255, 0);"></div> Vegetation</div>
+            <div class="legend-item"><div class="color-box" style="background: rgb(220, 220, 220);"></div> Other Category</div> <!-- Adjusted -->
+        </div>
+        
+    </div>
+
+    <p id="status-message"></p>
+    <a href="" id="download-link" style="display:none; text-align:center; font-weight: bold; color: #1e88e5;">
+        Download Segmented Image (TIFF)
+    </a>
+    
+    <script>
+        document.getElementById("upload-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            let formData = new FormData();
+            let fileInput = document.getElementById("file-input").files[0];
+
+            if (!fileInput) {
+                alert("Please select a file to upload.");
+                return;
+            }
+
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("status-message").innerText = "";
+            formData.append("file", fileInput);
+
+            fetch("/", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("loading").style.display = "none";
+
+                if (data.error) {
+                    document.getElementById("status-message").innerText = "Error: " + data.error;
+                } else {
+                    document.getElementById("uploaded-image").src = data.input_image_url;
+                    document.getElementById("uploaded-image").style.display = "block";
+
+                    document.getElementById("segmented-image").src = data.segmented_image_url;
+                    document.getElementById("segmented-image").style.display = "block";
+
+                    document.getElementById("status-message").innerText = "Segmentation Successful!";
+                    document.getElementById("download-link").href = data.download_link;
+                    document.getElementById("download-link").style.display = "block";
+                }
+            })
+            .catch(error => {
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("status-message").innerText = "Error: " + error.message;
+            });
+        });
+    </script>
+</body>
+</html>
